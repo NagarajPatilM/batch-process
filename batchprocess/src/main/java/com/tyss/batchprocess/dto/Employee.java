@@ -1,5 +1,6 @@
 package com.tyss.batchprocess.dto;
 
+import java.io.Serializable;
 import java.sql.Date;
 
 import javax.persistence.Column;
@@ -11,7 +12,7 @@ import lombok.Data;
 @Data
 @Entity
 @Table(name = "mas_employee")
-public class Employee {
+public class Employee implements Serializable{
 	
 	private Date DOB;
 	private Date DOJ;
