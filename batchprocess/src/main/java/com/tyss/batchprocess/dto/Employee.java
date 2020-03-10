@@ -18,5 +18,4 @@ public class Employee implements Serializable{
 	private Date DOJ;
 	@Column(name = "mail_id")
 	private String mailId;
-
 }
