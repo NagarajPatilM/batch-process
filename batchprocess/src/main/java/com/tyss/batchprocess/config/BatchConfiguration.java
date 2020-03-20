@@ -2,6 +2,8 @@ package com.tyss.batchprocess.config;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -16,12 +18,10 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.launch.support.SimpleJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
-import org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
 import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
-import org.springframework.batch.support.transaction.ResourcelessTransactionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -34,8 +34,6 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.scheduling.annotation.Scheduled;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
 import com.tyss.batchprocess.dto.Employee;
 import com.tyss.batchprocess.processor.EmployeeItemProcessor;
 
@@ -80,7 +78,6 @@ public class BatchConfiguration {
 
 	@Value("${query}")
 	private String query;
-	
 
 	/**
 	 * 
@@ -116,7 +113,7 @@ public class BatchConfiguration {
 	 * factory; }
 	 */
 
-	@Scheduled(cron = "0 0-55 12 * * ?")
+	@Scheduled(cron = "0 0-10 16 * * ?")
 	public void perform() {
 
 		log.info("Job Started at :" + new java.util.Date());
@@ -130,37 +127,22 @@ public class BatchConfiguration {
 			log.severe("Exception occurred while running the Batch !!! Exception is : " + e.getStackTrace());
 		}
 	}
-	
-	
 
 	public class EmployeeRowMapper implements RowMapper<Employee> {
 
 		@Override
 		public Employee mapRow(ResultSet rs, int rowNum) throws SQLException {
-		
 			Employee employee = new Employee();
-			//getData(rs);
-		
-			employee.setMailId(rs.getString("mail_id"));
-			log.info("DOB ========>" + rs.getString("DOB"));
-			log.info("DOJ ========>" + rs.getString("DOJ"));
-			log.info("mail id ======> " + rs.getString("mail_id"));
-			log.info("------------------------------------------->");
+			
+				employee.setMailId(rs.getString("mail_id"));
+				employee.setDateOfBirth(rs.getDate("DOB"));
+				employee.setDateOfJoin(rs.getDate("DOJ"));
+				log.info("DOB ========>" + rs.getString("DOB"));
+				log.info("DOJ ========>" + rs.getString("DOJ"));
+				log.info("mail id ======> " + rs.getString("mail_id"));
+				log.info("------------------------------------------->");
 			
 			return employee;
-		}
-
-		private void getData(ResultSet rs) {
-			Multimap<String, String> multimap = ArrayListMultimap.create();
-			try {
-				while(rs.next()) {
-					multimap.put(rs.getString("mail_id"), rs.getString("DOB"));
-					multimap.put(rs.getString("mail_id"), rs.getString("DOJ"));
-				}
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-			System.out.println(multimap);			
 		}
 	}
 

@@ -1,13 +1,16 @@
 package com.tyss.batchprocess.dto;
 
 import java.io.Serializable;
-import java.sql.Date;
+import java.util.Date;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Table;
 
+import org.springframework.boot.context.properties.ConstructorBinding;
+
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 
@@ -19,6 +22,8 @@ import lombok.Data;
 @Table(name = "mas_employee")
 public class Employee implements Serializable{
 	
+	
+	
 	@Column(name = "dob")
 	private Date dateOfBirth;
 	
@@ -27,5 +32,7 @@ public class Employee implements Serializable{
 	
 	@Column(name = "mail_id")
 	private String mailId;
+	
+	
 
 }
