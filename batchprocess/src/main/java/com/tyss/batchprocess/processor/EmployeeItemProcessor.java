@@ -42,8 +42,6 @@ public class EmployeeItemProcessor implements ItemProcessor<EmployeeBean, Employ
 	@Override
 	public EmployeeBean process(EmployeeBean employee) throws Exception {
 
-		System.out.println("Processor");
-
 		RestTemplate restTemplate = new RestTemplate();
 
 		Multimap<String, Date> multimapForDob = ArrayListMultimap.create();
