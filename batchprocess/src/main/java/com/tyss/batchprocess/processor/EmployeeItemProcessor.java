@@ -43,10 +43,9 @@ public class EmployeeItemProcessor implements ItemProcessor<EmployeeBean, Employ
 	@Override
 	public EmployeeBean process(EmployeeBean employee) throws Exception {
 		
-		System.out.println("************************Processor***************************");
-		System.out.println("employee mail-id"+employee.getMailId());
-		log.info("MAILID "+employee.getMailId()+" DOJ " + employee.getDateOfJoin());
-		log.info("MAILID "+employee.getMailId()+" DOB " + employee.getDateOfBirth());
+		log.info("************************Processor***************************");
+		log.info("MAILID "+employee.getMailId()+" , DOB " + employee.getDateOfBirth()+" , DOJ " + employee.getDateOfJoin());
+
 
 		RestTemplate restTemplate = new RestTemplate();
 
@@ -56,15 +55,11 @@ public class EmployeeItemProcessor implements ItemProcessor<EmployeeBean, Employ
 		LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
 		LocalDate convDob = localDateTime.toLocalDate();
 		
-		System.out.println("converted date "+convDob);
-		System.out.println("localdate "+LocalDate.now());
-		System.out.println(convDob.equals(LocalDate.now()));
 		if (convDob.equals(LocalDate.now())) {
-
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 			headers.set("from", from);
-			headers.set("subject", "karnataka");
+			headers.set("subject", "congratulations");
 			headers.set("tos", "[" + employee.getMailId() + "]");
 			//headers.set("ccs", "[" + "@gmail.com" + "]");
 			headers.set("ccs", ccs);
@@ -84,7 +79,7 @@ public class EmployeeItemProcessor implements ItemProcessor<EmployeeBean, Employ
 			headers.set("subject", "congrats");
 			headers.set("tos", "[" + employee.getMailId() + "]");
 			headers.set("ccs", ccs);
-			headers.set("content", "panther");
+			headers.set("content", "man");
 			MultiValueMap<String, String> map = new LinkedMultiValueMap<String, String>();
 
 			HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<MultiValueMap<String, String>>(map,
