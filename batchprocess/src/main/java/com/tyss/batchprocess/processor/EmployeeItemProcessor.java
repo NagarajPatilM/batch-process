@@ -50,11 +50,6 @@ public class EmployeeItemProcessor implements ItemProcessor<EmployeeBean, Employ
 
 		RestTemplate restTemplate = new RestTemplate();
 
-		/*
-		 * Multimap<String, Date> multimapForDob = ArrayListMultimap.create();
-		 * Multimap<String, Date> multimapForDoj = ArrayListMultimap.create();
-		 */
-
 		// converting java.util.Date to java.time.LocalDate
 		Date dob = employee.getDateOfBirth();
 		Instant instant = Instant.ofEpochMilli(dob.getTime());
@@ -63,14 +58,13 @@ public class EmployeeItemProcessor implements ItemProcessor<EmployeeBean, Employ
 		
 		System.out.println("converted date "+convDob);
 		System.out.println("localdate "+LocalDate.now());
-		if (convDob.compareTo(LocalDate.now())==0) {
-			
-			//multimapForDob.put(employee.getMailId(), employee.getDateOfBirth());
+		System.out.println(convDob.equals(LocalDate.now()));
+		if (convDob.equals(LocalDate.now())) {
 
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 			headers.set("from", from);
-			headers.set("subject", "chota");
+			headers.set("subject", "karnataka");
 			headers.set("tos", "[" + employee.getMailId() + "]");
 			//headers.set("ccs", "[" + "@gmail.com" + "]");
 			headers.set("ccs", ccs);
@@ -84,14 +78,11 @@ public class EmployeeItemProcessor implements ItemProcessor<EmployeeBean, Employ
 					SmsAndEmailResponse.class);
 
 		} else {
-			//multimapForDoj.put(employee.getMailId(), employee.getDateOfJoin());
-
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 			headers.set("from", from);
-			headers.set("subject", "pink");
+			headers.set("subject", "congrats");
 			headers.set("tos", "[" + employee.getMailId() + "]");
-			//headers.set("ccs", "[" + "@gmail.com" + "]");
 			headers.set("ccs", ccs);
 			headers.set("content", "panther");
 			MultiValueMap<String, String> map = new LinkedMultiValueMap<String, String>();
@@ -103,11 +94,6 @@ public class EmployeeItemProcessor implements ItemProcessor<EmployeeBean, Employ
 					SmsAndEmailResponse.class);
 
 		}
-
-		/*
-		 * log.info("mm " + multimapForDob); log.info("mm " + multimapForDoj);
-		 */
-
 		return employee;
 	}
 
