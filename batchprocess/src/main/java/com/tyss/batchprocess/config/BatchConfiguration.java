@@ -80,14 +80,17 @@ public class BatchConfiguration {
 	@Bean
 	public JdbcCursorItemReader<EmployeeBean> reader() {
 		JdbcCursorItemReader<EmployeeBean> reader = new JdbcCursorItemReader<>();
+
 		reader.setDataSource(dataSource);
 		reader.setSql(query);
 		reader.setRowMapper(new EmployeeRowMapper());
+		System.out.println("JDBCCursorItemReader");
 		return reader;
 	}
 
 	@Scheduled(cron = "0 0-10 20 * * ?")
 	public void perform() {
+		System.out.println("perform");
 		log.info("Job Started at :" + new java.util.Date());
 		JobParameters param = new JobParametersBuilder().addString("JobID", String.valueOf(System.currentTimeMillis()))
 				.toJobParameters();
@@ -132,6 +135,7 @@ public class BatchConfiguration {
 
 	@Bean
 	public Job exportEmployeeJob() {
+		System.out.println("exportEmployeeJob");
 		return jobBuilderFactory.get("exportEmployeeJob").incrementer(new RunIdIncrementer()).flow(step1()).end()
 				.build();
 	}
@@ -140,6 +144,8 @@ public class BatchConfiguration {
 	public SimpleJobLauncher simpleJobLauncher(JobRepository jobRepository) {
 		SimpleJobLauncher launcher = new SimpleJobLauncher();
 		launcher.setJobRepository(jobRepository);
+		System.out.println("SimpleJobLauncher");
+
 		return launcher;
 	}
 

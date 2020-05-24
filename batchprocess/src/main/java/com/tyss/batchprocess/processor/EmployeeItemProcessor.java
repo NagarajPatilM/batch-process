@@ -30,6 +30,7 @@ import lombok.extern.java.Log;
 @Log
 public class EmployeeItemProcessor implements ItemProcessor<EmployeeBean, EmployeeBean> {
 	
+	
 	@Value("${from.mailid}")
 	private String from;
 	
@@ -41,50 +42,58 @@ public class EmployeeItemProcessor implements ItemProcessor<EmployeeBean, Employ
 
 	@Override
 	public EmployeeBean process(EmployeeBean employee) throws Exception {
+		
+		System.out.println("************************Processor***************************");
+		System.out.println("employee mail-id"+employee.getMailId());
+		log.info("MAILID "+employee.getMailId()+" DOJ " + employee.getDateOfJoin());
+		log.info("MAILID "+employee.getMailId()+" DOB " + employee.getDateOfBirth());
 
 		RestTemplate restTemplate = new RestTemplate();
 
-		Multimap<String, Date> multimapForDob = ArrayListMultimap.create();
-		Multimap<String, Date> multimapForDoj = ArrayListMultimap.create();
+		/*
+		 * Multimap<String, Date> multimapForDob = ArrayListMultimap.create();
+		 * Multimap<String, Date> multimapForDoj = ArrayListMultimap.create();
+		 */
 
 		// converting java.util.Date to java.time.LocalDate
 		Date dob = employee.getDateOfBirth();
 		Instant instant = Instant.ofEpochMilli(dob.getTime());
 		LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
 		LocalDate convDob = localDateTime.toLocalDate();
-
-		if (convDob == LocalDate.now()) {
-			log.info("" + employee.getDateOfBirth());
-			multimapForDob.put(employee.getMailId(), employee.getDateOfBirth());
+		
+		System.out.println("converted date "+convDob);
+		System.out.println("localdate "+LocalDate.now());
+		if (convDob.compareTo(LocalDate.now())==0) {
+			
+			//multimapForDob.put(employee.getMailId(), employee.getDateOfBirth());
 
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 			headers.set("from", from);
-			headers.set("subject", "Congratulations");
+			headers.set("subject", "chota");
 			headers.set("tos", "[" + employee.getMailId() + "]");
 			//headers.set("ccs", "[" + "@gmail.com" + "]");
 			headers.set("ccs", ccs);
-			headers.set("content", "good night");
+			headers.set("content", "bheem");
 			MultiValueMap<String, String> map = new LinkedMultiValueMap<String, String>();
 
 			HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<MultiValueMap<String, String>>(map,
 					headers);
 
-			SmsAndEmailResponse resp = restTemplate.postForObject("http://localhost:8082/send-email", request,
+			SmsAndEmailResponse resp = restTemplate.postForObject(emailServiceUrl, request,
 					SmsAndEmailResponse.class);
 
 		} else {
-			log.info("" + employee.getDateOfJoin());
-			multimapForDoj.put(employee.getMailId(), employee.getDateOfJoin());
+			//multimapForDoj.put(employee.getMailId(), employee.getDateOfJoin());
 
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 			headers.set("from", from);
-			headers.set("subject", "congratulations");
-			System.out.println(employee.getMailId());
+			headers.set("subject", "pink");
 			headers.set("tos", "[" + employee.getMailId() + "]");
-			headers.set("ccs", "[" + "@gmail.com" + "]");
-			headers.set("content", "Good night");
+			//headers.set("ccs", "[" + "@gmail.com" + "]");
+			headers.set("ccs", ccs);
+			headers.set("content", "panther");
 			MultiValueMap<String, String> map = new LinkedMultiValueMap<String, String>();
 
 			HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<MultiValueMap<String, String>>(map,
@@ -95,8 +104,9 @@ public class EmployeeItemProcessor implements ItemProcessor<EmployeeBean, Employ
 
 		}
 
-		log.info("mm " + multimapForDob);
-		log.info("mm " + multimapForDoj);
+		/*
+		 * log.info("mm " + multimapForDob); log.info("mm " + multimapForDoj);
+		 */
 
 		return employee;
 	}
