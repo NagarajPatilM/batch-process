@@ -1,95 +1,60 @@
 package com.tyss.batchprocess.processor;
 
-import java.time.Instant;
-
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Date;
 
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
 import com.tyss.batchprocess.dto.EmployeeBean;
-import com.tyss.batchprocess.dto.SmsAndEmailResponse;
+import com.tyss.batchprocess.util.EmailUtil;
 
 import lombok.extern.java.Log;
+
 /**
  * 
- * This class processes the data which is in the form of Bean object  
- * and returns the processed data in the form of Bean object
+ * This class processes the data which is in the form of Bean object and returns
+ * the processed data in the form of Bean object
  */
 @Log
 public class EmployeeItemProcessor implements ItemProcessor<EmployeeBean, EmployeeBean> {
-	
-	
+
 	@Value("${from.mailid}")
 	private String from;
-	
+
 	@Value("${cc.mailid}")
 	private String ccs;
-	
+
 	@Value("${emailservice.url}")
 	private String emailServiceUrl;
 
 	@Override
 	public EmployeeBean process(EmployeeBean employee) throws Exception {
-		
-		log.info("************************Processor***************************");
-		log.info("MAILID "+employee.getMailId()+" , DOB " + employee.getDateOfBirth()+" , DOJ " + employee.getDateOfJoin());
 
+		System.out.println("************************Processor***************************");
+		log.info("MAILID " + employee.getMailId() + " DOJ " + employee.getDateOfJoin());
+		log.info("MAILID " + employee.getMailId() + " DOB " + employee.getDateOfBirth());
 
-		RestTemplate restTemplate = new RestTemplate();
-
-		// converting java.util.Date to java.time.LocalDate
+		// converting java.util.Date(DOB & DOJ) to String
 		Date dob = employee.getDateOfBirth();
-		Instant instant = Instant.ofEpochMilli(dob.getTime());
-		LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
-		LocalDate convDob = localDateTime.toLocalDate();
+		String sdob = dob.toString().substring(5);
+
+		Date doj = employee.getDateOfJoin();
+		String sdoj = doj.toString().substring(5);
 		
-		if (convDob.equals(LocalDate.now())) {
-			HttpHeaders headers = new HttpHeaders();
-			headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-			headers.set("from", from);
-			headers.set("subject", "congratulations");
-			headers.set("tos", "[" + employee.getMailId() + "]");
-			//headers.set("ccs", "[" + "@gmail.com" + "]");
-			headers.set("ccs", ccs);
-			headers.set("content", "bheem");
-			MultiValueMap<String, String> map = new LinkedMultiValueMap<String, String>();
+        //fetching today's date and converting to the String
+		String todaysDate = LocalDate.now().toString().substring(5);
 
-			HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<MultiValueMap<String, String>>(map,
-					headers);
+		EmailUtil emailUtil = new EmailUtil();
 
-			SmsAndEmailResponse resp = restTemplate.postForObject(emailServiceUrl, request,
-					SmsAndEmailResponse.class);
-
+		if (sdob.equals(sdoj)) {
+			emailUtil.sendBirthdayMail(from, employee.getMailId(), ccs, emailServiceUrl);
+			emailUtil.sendAnniversaryMail(from, employee.getMailId(), ccs, emailServiceUrl);
+		} else if (sdob.equals(todaysDate)) {
+			emailUtil.sendBirthdayMail(from, employee.getMailId(), ccs, emailServiceUrl);
 		} else {
-			HttpHeaders headers = new HttpHeaders();
-			headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-			headers.set("from", from);
-			headers.set("subject", "congrats");
-			headers.set("tos", "[" + employee.getMailId() + "]");
-			headers.set("ccs", ccs);
-			headers.set("content", "man");
-			MultiValueMap<String, String> map = new LinkedMultiValueMap<String, String>();
-
-			HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<MultiValueMap<String, String>>(map,
-					headers);
-
-			SmsAndEmailResponse resp = restTemplate.postForObject(emailServiceUrl, request,
-					SmsAndEmailResponse.class);
-
+			emailUtil.sendAnniversaryMail(from, employee.getMailId(), ccs, emailServiceUrl);
 		}
 		return employee;
 	}
-
 }

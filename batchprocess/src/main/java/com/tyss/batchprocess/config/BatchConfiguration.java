@@ -69,45 +69,59 @@ public class BatchConfiguration {
 	@Value("${spring.datasource.password}")
 	private String password;
 
-	@Value("${query}")
-	private String query;
+	@Value("${query.dob}")
+	private String dobQuery;
+
+	@Value("${query.doj}")
+	private String dojQuery;
 
 	/**
 	 * 
 	 * @return
 	 */
-
 	@Bean
-	public JdbcCursorItemReader<EmployeeBean> reader() {
+	public JdbcCursorItemReader<EmployeeBean> dobReader() {
 		JdbcCursorItemReader<EmployeeBean> reader = new JdbcCursorItemReader<>();
-
 		reader.setDataSource(dataSource);
-		reader.setSql(query);
+		reader.setSql(dobQuery);
 		reader.setRowMapper(new EmployeeRowMapper());
-		System.out.println("JDBCCursorItemReader");
 		return reader;
 	}
+	
+	@Bean
+	public JdbcCursorItemReader<EmployeeBean> dojReader() {
+		JdbcCursorItemReader<EmployeeBean> reader = new JdbcCursorItemReader<>();
+		reader.setDataSource(dataSource);
+		reader.setSql(dojQuery);
+		reader.setRowMapper(new EmployeeRowMapper());
+		return reader;
+	}s
+
 
 	@Scheduled(cron = "0 0-10 20 * * ?")
 	public void perform() {
-		System.out.println("perform");
 		log.info("Job Started at :" + new java.util.Date());
 		JobParameters param = new JobParametersBuilder().addString("JobID", String.valueOf(System.currentTimeMillis()))
 				.toJobParameters();
 		try {
-			JobExecution execution = jobLauncher.run(exportEmployeeJob(), param);
+			JobExecution execution = jobLauncher.run(exportDob(), param);
 			log.info("Job finished with status :" + execution.getStatus());
 		} catch (Exception e) {
 			log.severe("Exception occurred while running the Batch !!! Exception is : " + e.getStackTrace());
 		}
 	}
 
-	public class EmployeeRowMapper implements RowMapper<EmployeeBean> {
+	private class EmployeeRowMapper implements RowMapper<EmployeeBean> {
+
+		/**
+		 * {@code mapRow} execution depends on no. of rows present in the ResultSet In
+		 * other words, if there are n no. of records this method will be executed for n
+		 * no. of times
+		 */
 
 		@Override
 		public EmployeeBean mapRow(ResultSet rs, int rowNum) throws SQLException {
 			EmployeeBean employee = new EmployeeBean();
-
 			employee.setMailId(rs.getString("mail_id"));
 			employee.setDateOfBirth(rs.getDate("DOB"));
 			employee.setDateOfJoin(rs.getDate("DOJ"));
@@ -126,27 +140,37 @@ public class BatchConfiguration {
 
 	@Bean
 	public Step step1() {
-		System.out.println("Step1");
-		return stepBuilderFactory.get("step1").<EmployeeBean, EmployeeBean>chunk(10).reader(reader()).processor(processor())
-				.writer(items -> {
+		return stepBuilderFactory.get("step1").<EmployeeBean, EmployeeBean>chunk(10).reader(reader())
+				.processor(processor()).writer(items -> {
 					// do nothing
 				}).build();
 	}
 
 	@Bean
-	public Job exportEmployeeJob() {
-		System.out.println("exportEmployeeJob");
-		return jobBuilderFactory.get("exportEmployeeJob").incrementer(new RunIdIncrementer()).flow(step1()).end()
-				.build();
+	public Step step2() {
+		return stepBuilderFactory.get("step2").<EmployeeBean, EmployeeBean>chunk(10).reader(reader1())
+				.processor(processor()).writer(items -> {
+					// do nothing
+				}).build();
 	}
 
 	@Bean
 	public SimpleJobLauncher simpleJobLauncher(JobRepository jobRepository) {
 		SimpleJobLauncher launcher = new SimpleJobLauncher();
 		launcher.setJobRepository(jobRepository);
-		System.out.println("SimpleJobLauncher");
-
 		return launcher;
+	}
+
+    //Job 1
+	@Bean
+	public Job exportDob() {
+		return jobBuilderFactory.get("exportDob").incrementer(new RunIdIncrementer()).flow(step1()).end().build();
+	}
+
+	// Job 2
+	@Bean
+	public Job exportDoj() {
+		return jobBuilderFactory.get("exportDoj").incrementer(new RunIdIncrementer()).flow(step2()).end().build();
 	}
 
 }
