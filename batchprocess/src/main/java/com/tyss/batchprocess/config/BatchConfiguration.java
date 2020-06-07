@@ -2,6 +2,7 @@ package com.tyss.batchprocess.config;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Date;
 
 import javax.sql.DataSource;
 
@@ -13,7 +14,10 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
-import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.job.builder.FlowBuilder;
+import org.springframework.batch.core.job.flow.Flow;
+import org.springframework.batch.core.job.flow.support.SimpleFlow;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.SimpleJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
@@ -24,17 +28,20 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import com.tyss.batchprocess.dto.EmployeeBean;
-import com.tyss.batchprocess.processor.EmployeeItemProcessor;
+import com.tyss.batchprocess.processor.ProcessorForDob;
+import com.tyss.batchprocess.processor.ProcessorForDoj;
 
 import lombok.extern.java.Log;
 
 /**
- * 
- * Configuration class where all the properties are configured
+ * The class {@code BatchConfiguration} is a Configuration class where all the
+ * properties are configured
  *
  */
 @Configuration
@@ -76,8 +83,10 @@ public class BatchConfiguration {
 	private String dojQuery;
 
 	/**
+	 * Reader that reads the data only related to today's date from the database by
+	 * executing dobQuery
 	 * 
-	 * @return
+	 * @return ({@link JdbcCursorItemReader}
 	 */
 	@Bean
 	public JdbcCursorItemReader<EmployeeBean> dobReader() {
@@ -87,7 +96,13 @@ public class BatchConfiguration {
 		reader.setRowMapper(new EmployeeRowMapper());
 		return reader;
 	}
-	
+
+	/**
+	 * Reader that reads the data only related to today's date from the database by
+	 * executing dojQuery
+	 * 
+	 * @return ({@link JdbcCursorItemReader}
+	 */
 	@Bean
 	public JdbcCursorItemReader<EmployeeBean> dojReader() {
 		JdbcCursorItemReader<EmployeeBean> reader = new JdbcCursorItemReader<>();
@@ -95,19 +110,22 @@ public class BatchConfiguration {
 		reader.setSql(dojQuery);
 		reader.setRowMapper(new EmployeeRowMapper());
 		return reader;
-	}s
+	}
 
-
-	@Scheduled(cron = "0 0-10 20 * * ?")
+	/**
+	 * This method executes at a specified time mentioned in the cron expression
+	 */
+	@Scheduled(cron = "0 20-30 5 * * ?")
 	public void perform() {
 		log.info("Job Started at :" + new java.util.Date());
-		JobParameters param = new JobParametersBuilder().addString("JobID", String.valueOf(System.currentTimeMillis()))
-				.toJobParameters();
 		try {
-			JobExecution execution = jobLauncher.run(exportDob(), param);
+			JobParameters param = new JobParametersBuilder().addDate("date", new Date())
+					.addLong("time", System.currentTimeMillis())
+					/* .addString("JobID", String.valueOf(System.currentTimeMillis())) */.toJobParameters();
+			JobExecution execution = jobLauncher.run(exportDobDoj11(), param);
 			log.info("Job finished with status :" + execution.getStatus());
 		} catch (Exception e) {
-			log.severe("Exception occurred while running the Batch !!! Exception is : " + e.getStackTrace());
+			log.severe("Exception occurred while running the perform() !!! Exception is : " + e.getStackTrace());
 		}
 	}
 
@@ -116,11 +134,15 @@ public class BatchConfiguration {
 		/**
 		 * {@code mapRow} execution depends on no. of rows present in the ResultSet In
 		 * other words, if there are n no. of records this method will be executed for n
-		 * no. of times
+		 * no. of times.
+		 * 
+		 * @param rs ResultSet that contains the records
+		 * 
+		 * @return {@code EmployeeBean}
 		 */
-
 		@Override
 		public EmployeeBean mapRow(ResultSet rs, int rowNum) throws SQLException {
+			System.out.println("Inside mapRow");
 			EmployeeBean employee = new EmployeeBean();
 			employee.setMailId(rs.getString("mail_id"));
 			employee.setDateOfBirth(rs.getDate("DOB"));
@@ -133,44 +155,77 @@ public class BatchConfiguration {
 		}
 	}
 
+	// creates an object of {@code ProcessorForDob}
 	@Bean
-	public EmployeeItemProcessor processor() {
-		return new EmployeeItemProcessor();
+	public ProcessorForDob processorForDob() {
+		return new ProcessorForDob();
 	}
 
+	// creates an object of {@code ProcessorForDoj}
 	@Bean
-	public Step step1() {
-		return stepBuilderFactory.get("step1").<EmployeeBean, EmployeeBean>chunk(10).reader(reader())
-				.processor(processor()).writer(items -> {
+	public ProcessorForDoj processorForDoj() {
+		return new ProcessorForDoj();
+	}
+
+	// step related to execution of data related to dob
+	@Bean
+	public Step stepForDob() {
+		return stepBuilderFactory.get("stepForDob").<EmployeeBean, EmployeeBean>chunk(10).reader(dobReader())
+				.processor(processorForDob()).writer(items -> {
 					// do nothing
 				}).build();
 	}
 
+	// step related to execution of data related to doj
 	@Bean
-	public Step step2() {
-		return stepBuilderFactory.get("step2").<EmployeeBean, EmployeeBean>chunk(10).reader(reader1())
-				.processor(processor()).writer(items -> {
+	public Step stepForDoj() {
+		return stepBuilderFactory.get("stepForDoj").<EmployeeBean, EmployeeBean>chunk(10).reader(dojReader())
+				.processor(processorForDoj()).writer(items -> {
 					// do nothing
 				}).build();
 	}
 
+	// method that is responsible for parallel processing of stepForDob and
+	// stepForDoj
+	@Bean
+	public TaskExecutor taskExecutor() {
+		return new SimpleAsyncTaskExecutor("spring_batch");
+	}
+
+	@Bean
+	public Flow splitFlow() {
+		return new FlowBuilder<SimpleFlow>("splitFlow").split(taskExecutor()).add(flow1(), flow2()).build();
+	}
+
+	@Bean
+	public Flow flow1() {
+		return new FlowBuilder<SimpleFlow>("flow1").start(stepForDob()) // .next(stepForDoj())
+				.build();
+	}
+
+	@Bean
+	public Flow flow2() {
+		return new FlowBuilder<SimpleFlow>("flow2").start(stepForDoj()).build();
+	}
+
+	@Bean
+	public Job exportDobDoj11() {
+		return jobBuilderFactory.get("exportDobDoj11").start(splitFlow()).build().build();
+	}
+
+	/**
+	 * Methos that creates {@link SimpleJobLauncher} instance by setting
+	 * {@link JobRepository}
+	 * 
+	 * @param jobRepository
+	 * @return {@link SimpleJobLauncher} the implementation class of
+	 *         {@link JobLauncher} interface
+	 */
 	@Bean
 	public SimpleJobLauncher simpleJobLauncher(JobRepository jobRepository) {
 		SimpleJobLauncher launcher = new SimpleJobLauncher();
 		launcher.setJobRepository(jobRepository);
 		return launcher;
-	}
-
-    //Job 1
-	@Bean
-	public Job exportDob() {
-		return jobBuilderFactory.get("exportDob").incrementer(new RunIdIncrementer()).flow(step1()).end().build();
-	}
-
-	// Job 2
-	@Bean
-	public Job exportDoj() {
-		return jobBuilderFactory.get("exportDoj").incrementer(new RunIdIncrementer()).flow(step2()).end().build();
 	}
 
 }
